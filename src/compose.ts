@@ -59,3 +59,22 @@ export default function compose(...funcs: Function[]) {
         a(b(...args))
   )
 }
+
+// const func1 = next => action => next(action, 1)
+// const func2 = next => action => next(action, 2)
+// const func3 = next => action => next(action, 3)
+// dispatch = compose([func1, func2, func3])(dispatch) 执行步骤
+// 第一次循环  
+// (func1, func2) => (...args) => func1(func2(...args))
+// 第一次循环结果 const temp = (...args) => func1(func2(...args))
+// 第二次循环
+// (temp, func3) => (...args) => temp(func3(...args));
+// 第二次循环结果 const temp2 = (...args) => temp(func3(...args))
+// dispatch 传入调用 (dispatch) => temp(func3(dispatch))
+// 设置func3(dispatch) 结果为 newDispatch3
+// (newDispatch3) => func1(fun2(newDispatch3))
+// 设置func2(newDispatch3) 结果为 newDispatch2
+// 设置func1(newDispatch2) 结果为 newDispatch1
+// 这时候的newDispatch1已经包含了newDispatch3和newDispatch2的逻辑
+
+

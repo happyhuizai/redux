@@ -68,6 +68,9 @@ export default function createStore<
   preloadedState?: PreloadedState<S> | StoreEnhancer<Ext, StateExt>,
   enhancer?: StoreEnhancer<Ext, StateExt>
 ): Store<ExtendState<S, StateExt>, A, StateExt, Ext> & Ext {
+  /**
+   * 参数转化
+   */
   if (
     (typeof preloadedState === 'function' && typeof enhancer === 'function') ||
     (typeof enhancer === 'function' && typeof arguments[3] === 'function')
@@ -92,7 +95,10 @@ export default function createStore<
         )}'`
       )
     }
-
+    /**
+     * 如果enhancer存在就将createStore作为参数传给他
+     * 返回一个新的createStore
+     */
     return enhancer(createStore)(
       reducer,
       preloadedState as PreloadedState<S>
@@ -106,7 +112,13 @@ export default function createStore<
       )}'`
     )
   }
-
+  /**
+   * currentReducer 当前的reducer
+   * currentState 当前的state
+   * currentListeners 当前注册的监听数组函数
+   * nextListeners 下一个监听数组函数
+   * isDispatching 是否正在dispatch中
+   */
   let currentReducer = reducer
   let currentState = preloadedState as S
   let currentListeners: (() => void)[] | null = []
@@ -119,6 +131,9 @@ export default function createStore<
    *
    * This prevents any bugs around consumers calling
    * subscribe/unsubscribe in the middle of a dispatch.
+   * 
+   * currentListeners 的浅复制，在dispatch时将 nextListeners 用作副本。
+   * 这可以防止消费者在dispatch过程中调用订阅/取消订阅的任何错误。
    */
   function ensureCanMutateNextListeners() {
     if (nextListeners === currentListeners) {
@@ -130,6 +145,7 @@ export default function createStore<
    * Reads the state tree managed by the store.
    *
    * @returns The current state tree of your application.
+   * 返回state
    */
   function getState(): S {
     if (isDispatching) {
@@ -165,6 +181,7 @@ export default function createStore<
    *
    * @param listener A callback to be invoked on every dispatch.
    * @returns A function to remove this change listener.
+   * 订阅监听函数并返回取消订阅监听函数
    */
   function subscribe(listener: () => void) {
     if (typeof listener !== 'function') {
@@ -174,7 +191,7 @@ export default function createStore<
         )}'`
       )
     }
-
+    // 不能在dispatch时也就是reducer执行时订阅/取消订阅监听函数(isDispatching会在reducer执行前设置成true执行结束后设置成false)
     if (isDispatching) {
       throw new Error(
         'You may not call store.subscribe() while the reducer is executing. ' +
@@ -183,13 +200,15 @@ export default function createStore<
           'See https://redux.js.org/api/store#subscribelistener for more details.'
       )
     }
-
+    
+    // 是否被subscribe
     let isSubscribed = true
 
     ensureCanMutateNextListeners()
     nextListeners.push(listener)
 
     return function unsubscribe() {
+      // 已经监听函数已经被被unsubscribe就retrun
       if (!isSubscribed) {
         return
       }
@@ -204,6 +223,7 @@ export default function createStore<
       isSubscribed = false
 
       ensureCanMutateNextListeners()
+      // 移除监听函数
       const index = nextListeners.indexOf(listener)
       nextListeners.splice(index, 1)
       currentListeners = null
@@ -236,6 +256,7 @@ export default function createStore<
    * return something else (for example, a Promise you can await).
    */
   function dispatch(action: A) {
+    // action必须是一个函数
     if (!isPlainObject(action)) {
       throw new Error(
         `Actions must be plain objects. Instead, the actual type was: '${kindOf(
@@ -243,24 +264,27 @@ export default function createStore<
         )}'. You may need to add middleware to your store setup to handle dispatching other values, such as 'redux-thunk' to handle dispatching functions. See https://redux.js.org/tutorials/fundamentals/part-4-store#middleware and https://redux.js.org/tutorials/fundamentals/part-6-async-logic#using-the-redux-thunk-middleware for examples.`
       )
     }
-
+    // action的type属性不能为空
     if (typeof action.type === 'undefined') {
       throw new Error(
         'Actions may not have an undefined "type" property. You may have misspelled an action type string constant.'
       )
     }
-
+    // 如果 reducer 还在 运行不能调用再次 dispatch
     if (isDispatching) {
       throw new Error('Reducers may not dispatch actions.')
     }
 
     try {
+      // reducer 执行前开启
       isDispatching = true
+      // 调用reducer 获取新的state 赋值给 currentState
       currentState = currentReducer(currentState, action)
     } finally {
+      // reducer 执行结束后关闭
       isDispatching = false
     }
-
+    // 调用监听函数
     const listeners = (currentListeners = nextListeners)
     for (let i = 0; i < listeners.length; i++) {
       const listener = listeners[i]
@@ -279,6 +303,7 @@ export default function createStore<
    *
    * @param nextReducer The reducer for the store to use instead.
    * @returns The same store instance with a new reducer in place.
+   * 替换reducer
    */
   function replaceReducer<NewState, NewActions extends A>(
     nextReducer: Reducer<NewState, NewActions>

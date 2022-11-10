@@ -110,6 +110,11 @@ function assertReducerShape(reducers: ReducersMapObject) {
  * @returns A reducer function that invokes every reducer inside the passed
  *   object, and builds a state object with the same shape.
  */
+
+
+//当我们应用越来越复杂，如果将所有逻辑都写在一个reducer里面，最终这个文件可能会有成千上万行，
+//所以Redux提供了combineReducers，可以让我们为不同的模块写自己的reducer，最终将他们组合起来。
+
 export default function combineReducers<S>(
   reducers: ReducersMapObject<S, any>
 ): Reducer<CombinedState<S>>
@@ -123,6 +128,7 @@ export default function combineReducers<M extends ReducersMapObject>(
   ActionFromReducersMapObject<M>
 >
 export default function combineReducers(reducers: ReducersMapObject) {
+  // 获取 reducers 的key
   const reducerKeys = Object.keys(reducers)
   const finalReducers: ReducersMapObject = {}
   for (let i = 0; i < reducerKeys.length; i++) {
@@ -149,6 +155,7 @@ export default function combineReducers(reducers: ReducersMapObject) {
 
   let shapeAssertionError: unknown
   try {
+    // 验证reducers不能返回undefind
     assertReducerShape(finalReducers)
   } catch (e) {
     shapeAssertionError = e
@@ -158,6 +165,7 @@ export default function combineReducers(reducers: ReducersMapObject) {
     state: StateFromReducersMapObject<typeof reducers> = {},
     action: AnyAction
   ) {
+    // 如果shapeAssertionError存在抛出错误
     if (shapeAssertionError) {
       throw shapeAssertionError
     }
@@ -173,13 +181,18 @@ export default function combineReducers(reducers: ReducersMapObject) {
         warning(warningMessage)
       }
     }
-
+    // state 是否发生改变
     let hasChanged = false
+    // 下一次的state
     const nextState: StateFromReducersMapObject<typeof reducers> = {}
     for (let i = 0; i < finalReducerKeys.length; i++) {
+      // 获取reducer的key
       const key = finalReducerKeys[i]
+      // 获取reducer
       const reducer = finalReducers[key]
+      // 查询state对应key的值
       const previousStateForKey = state[key]
+      // 执行 reducer 获取新值
       const nextStateForKey = reducer(previousStateForKey, action)
       if (typeof nextStateForKey === 'undefined') {
         const actionType = action && action.type
@@ -191,11 +204,15 @@ export default function combineReducers(reducers: ReducersMapObject) {
             `If you want this reducer to hold no value, you can return null instead of undefined.`
         )
       }
+      // 设置下一次state对应的值
       nextState[key] = nextStateForKey
+      // 对比下一次state对应的值和state对应的key值是否相等判断state是否发生改变
       hasChanged = hasChanged || nextStateForKey !== previousStateForKey
     }
+    // 最后对比下一次state key的length和state key的length是否一样
     hasChanged =
       hasChanged || finalReducerKeys.length !== Object.keys(state).length
+    // 是否返回新的state
     return hasChanged ? nextState : state
   }
 }

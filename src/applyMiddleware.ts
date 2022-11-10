@@ -65,6 +65,7 @@ export default function applyMiddleware(
       reducer: Reducer<S, A>,
       preloadedState?: PreloadedState<S>
     ) => {
+      // 创建stroe
       const store = createStore(reducer, preloadedState)
       let dispatch: Dispatch = () => {
         throw new Error(
@@ -77,7 +78,10 @@ export default function applyMiddleware(
         getState: store.getState,
         dispatch: (action, ...args) => dispatch(action, ...args)
       }
+      // 中间件 const eg = (store) => (next) => (action) => next(action)
+      // 执行eg将 middlewareAPI 传入得到(next) => (action) => xxx
       const chain = middlewares.map(middleware => middleware(middlewareAPI))
+
       dispatch = compose<typeof dispatch>(...chain)(store.dispatch)
 
       return {
