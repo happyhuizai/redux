@@ -79,7 +79,14 @@ export default function applyMiddleware(
         dispatch: (action, ...args) => dispatch(action, ...args)
       }
       // 中间件 const eg = (store) => (next) => (action) => next(action)
-      // 执行eg将 middlewareAPI 传入得到(next) => (action) => xxx
+      // 遍历中间件将 middlewareAPI 传入中间件((middlewareAPI) => (next) => (action) => xxx 每个中间件都能获得 middlewareAPI )
+      // redux-thunk 源码
+      // ({ dispatch, getState }) => next => action => {
+      //    if (typeof action === 'function') {
+      //     return action(dispatch, getState, extraArgument);
+      //    }
+      //    return next(action);
+      // };
       const chain = middlewares.map(middleware => middleware(middlewareAPI))
       // 修改dispatch改变middlewareAPI属性dispatch函数返回值
       dispatch = compose<typeof dispatch>(...chain)(store.dispatch)
