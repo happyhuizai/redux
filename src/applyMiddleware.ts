@@ -81,7 +81,7 @@ export default function applyMiddleware(
       // 中间件 const eg = (store) => (next) => (action) => next(action)
       // 执行eg将 middlewareAPI 传入得到(next) => (action) => xxx
       const chain = middlewares.map(middleware => middleware(middlewareAPI))
-
+      // 修改dispatch改变middlewareAPI属性dispatch函数返回值
       dispatch = compose<typeof dispatch>(...chain)(store.dispatch)
 
       return {
